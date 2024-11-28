@@ -6,7 +6,17 @@ from docx.shared import Pt
 from re import findall
 import json
 
-# Initialize OpenAI client
+def custom_input(msg):
+    print(msg)
+    lines = []
+    while True:
+        line = input()
+        if line == "END":  # End of input indicator
+            break
+        lines.append(line)
+    return "\n".join(lines)
+
+# initialize OpenAI client
 def initialize_openai_client(api_key_env="OPENAI_API_KEY"):
     """
     Initialize the OpenAI client using the API key from the environment variable.
@@ -23,11 +33,11 @@ class ChatGPTSessionManager:
         self.history_file = history_file
         self.history = []
 
-    # Add a message to the conversation history
+    # add a message to the conversation history
     def add_to_history(self, role, content):
         self.history.append({"role": role, "content": content})
 
-    # Send a message to ChatGPT and get a response
+    # send a message to ChatGPT and get a response
     def chat(self, message):
         self.add_to_history("user", message)
         response = self.client.chat.completions.create(
@@ -39,13 +49,13 @@ class ChatGPTSessionManager:
         return chat_response
 
 
-    # Save conversation history to a file
+    # save conversation history to a file
     def save_history(self):
         with open(self.history_file, 'w') as f:
             json.dump(self.history, f, indent=4)
 
 
-# Read Python code from a file
+# read Python code from a file
 def read_python_code(file_path):
     """
     Reads a Python code file and returns its content as a string.
@@ -59,20 +69,20 @@ def read_python_code(file_path):
         raise FileNotFoundError(f"The file '{file_path}' was not found.")
 
 
-# Save Markdown-formatted documentation to Word
+# save Markdown-formatted documentation to Word
 def save_markdown_to_word(markdown_text, output_file="documentation.docx"):
     """
     Converts Markdown-formatted text to a Word document with improved formatting that supports inline styles.
     """
     document = Document()
 
-    # Add a centered title with proper styling
+    # add a centered title with proper styling
     title = document.add_heading("Generated Documentation", level=1)
     title.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
     title.style.font.size = Pt(14)
     title.style.font.bold = True
 
-    # Process Markdown lines
+    # process Markdown lines
     lines = markdown_text.split("\n")
     in_code_block = False
 
@@ -125,7 +135,7 @@ def save_markdown_to_word(markdown_text, output_file="documentation.docx"):
 
 
 # Generate documentation with GPT-3.5 Turbo in English
-def generate_documentation(client, code_snippets, style):
+def generate_documentation(client, code_snippets, style, additional_requests=None):
     """
     Generate documentation in English using GPT-3.5 Turbo.
     """
@@ -187,6 +197,10 @@ The documentation should adhere to the following structure:
 - Include clear headings and subheadings for organization.
 - Use bold text, italics, and code blocks as necessary to emphasize key points or sections of the code.
 """
+    if additional_requests:
+        custom_requests = "\n".join([f"- {req}" for req in additional_requests])
+        system_prompt += f"\nAdditionally, address the following user requests:\n{custom_requests}\n"
+
     session_manager = ChatGPTSessionManager(client)
     session_manager.add_to_history("system", system_prompt)
     response = session_manager.chat(combined_code)
@@ -197,6 +211,7 @@ def translate_to_hungarian(client, english_text):
     """
     Translate English text to Hungarian using GPT-3.5 Turbo.
     """
+    session_manager = ChatGPTSessionManager(client)
 
     prompt = f"""
 Translate the following English text into fluent Hungarian while preserving its professional tone and logical structure:
